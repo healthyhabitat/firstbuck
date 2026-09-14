@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IdeaForm, type FormValues } from "./IdeaForm";
 import { ResultsView } from "./ResultsView";
 import type { OfferPack } from "@/lib/types";
 
 const STORAGE_KEY = "fb_last_pack";
+const FORM_KEY = "fb_last_form";
 const REGEN_KEY = "fb_regen_used";
 
 export function CreateApp({
@@ -22,36 +23,26 @@ export function CreateApp({
   const [error, setError] = useState<string | null>(null);
   const [regenUsed, setRegenUsed] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
+  const refreshed = useRef(false);
 
-  useEffect(() => {
-    fetch("/api/unlock/status")
-      .then((r) => r.json())
-      .then((d: { unlocked?: boolean; paymentsConfigured?: boolean; canMock?: boolean }) => {
-        if (d.unlocked) setUnlocked(true);
-        setPaymentsConfigured(Boolean(d.paymentsConfigured));
-        setCanMock(Boolean(d.canMock));
-      })
-      .catch(() => {});
-
+  const persistPack = (p: OfferPack) => {
+    setPack(p);
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) setPack(JSON.parse(raw) as OfferPack);
-      setRegenUsed(sessionStorage.getItem(REGEN_KEY) === "1");
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(p));
     } catch {
       /* ignore */
     }
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("canceled") === "1") setBanner("Checkout canceled — no charge.");
-    if (params.get("unlock_error") === "1")
-      setBanner("Could not verify payment. Try again or contact support.");
-    if (params.get("unlocked") === "1") setBanner("Welcome back — full pack unlocked.");
-  }, []);
+  };
 
   const generate = useCallback(async (values: FormValues) => {
     setLoading(true);
     setError(null);
     setLastForm(values);
+    try {
+      sessionStorage.setItem(FORM_KEY, JSON.stringify(values));
+    } catch {
+      /* ignore */
+    }
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -68,24 +59,70 @@ export function CreateApp({
         setLoading(false);
         return;
       }
-      setPack(data.pack);
+      persistPack(data.pack);
       if (typeof data.unlocked === "boolean") setUnlocked(data.unlocked);
-      try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data.pack));
-      } catch {
-        /* ignore */
-      }
     } catch {
       setError("Network error — check your connection and try again.");
     }
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    fetch("/api/unlock/status")
+      .then((r) => r.json())
+      .then(
+        (d: {
+          unlocked?: boolean;
+          paymentsConfigured?: boolean;
+          canMock?: boolean;
+        }) => {
+          if (d.unlocked) setUnlocked(true);
+          setPaymentsConfigured(Boolean(d.paymentsConfigured));
+          setCanMock(Boolean(d.canMock));
+        }
+      )
+      .catch(() => {});
+
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) setPack(JSON.parse(raw) as OfferPack);
+      const formRaw = sessionStorage.getItem(FORM_KEY);
+      if (formRaw) setLastForm(JSON.parse(formRaw) as FormValues);
+      setRegenUsed(sessionStorage.getItem(REGEN_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("canceled") === "1")
+      setBanner("Checkout canceled — no charge.");
+    if (params.get("unlock_error") === "1")
+      setBanner("Could not verify payment. Try again or contact support.");
+    if (params.get("unlocked") === "1")
+      setBanner("Welcome back — full pack unlocked.");
+  }, []);
+
+  // After unlock, refresh pack so Gumroad + full fields return
+  useEffect(() => {
+    if (!unlocked || refreshed.current) return;
+    let form = lastForm;
+    if (!form) {
+      try {
+        const formRaw = sessionStorage.getItem(FORM_KEY);
+        if (formRaw) form = JSON.parse(formRaw) as FormValues;
+      } catch {
+        /* ignore */
+      }
+    }
+    if (!form) return;
+    refreshed.current = true;
+    void generate(form);
+  }, [unlocked, lastForm, generate]);
+
   async function regenerate() {
     if (!lastForm || regenUsed) return;
     sessionStorage.setItem(REGEN_KEY, "1");
     setRegenUsed(true);
-    // Nudge seed by appending a space-variant via audience tweak for fresh copy
     await generate({
       ...lastForm,
       audience: lastForm.audience
@@ -104,8 +141,8 @@ export function CreateApp({
           Paste an idea. Get a micro-offer.
         </h1>
         <p className="mt-2 text-slate-400">
-          First generation is free. Unlock the full pack for $1 when you&apos;re ready
-          to ship.
+          First generation is free. Unlock the full pack for $1 when you&apos;re
+          ready to ship.
         </p>
       </header>
 
@@ -119,17 +156,28 @@ export function CreateApp({
       ) : null}
 
       <div className="rounded-2xl border border-white/8 bg-[#0c1222]/80 p-5 sm:p-6">
-        <IdeaForm onSubmit={generate} loading={loading} initial={lastForm ?? undefined} />
+        <IdeaForm
+          onSubmit={generate}
+          loading={loading}
+          initial={lastForm ?? undefined}
+        />
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" role="alert">
+        <p
+          className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
 
       {loading && !pack ? (
-        <div className="mt-8 animate-pulse space-y-3" aria-busy="true" aria-label="Loading">
+        <div
+          className="mt-8 animate-pulse space-y-3"
+          aria-busy="true"
+          aria-label="Loading"
+        >
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-24 rounded-2xl bg-white/5" />
           ))}
@@ -138,7 +186,8 @@ export function CreateApp({
 
       {!loading && !pack && !error ? (
         <p className="mt-8 text-center text-sm text-slate-500">
-          Your offer pack will show up here — name, promise, posts, and a 24-hour checklist.
+          Your offer pack will show up here — name, promise, posts, and a
+          24-hour checklist.
         </p>
       ) : null}
 
