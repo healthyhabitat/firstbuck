@@ -1,0 +1,160 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { IdeaForm, type FormValues } from "./IdeaForm";
+import { ResultsView } from "./ResultsView";
+import type { OfferPack } from "@/lib/types";
+
+const STORAGE_KEY = "fb_last_pack";
+const REGEN_KEY = "fb_regen_used";
+
+export function CreateApp({
+  initialUnlocked = false,
+}: {
+  initialUnlocked?: boolean;
+}) {
+  const [pack, setPack] = useState<OfferPack | null>(null);
+  const [lastForm, setLastForm] = useState<FormValues | null>(null);
+  const [unlocked, setUnlocked] = useState(initialUnlocked);
+  const [paymentsConfigured, setPaymentsConfigured] = useState(false);
+  const [canMock, setCanMock] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [regenUsed, setRegenUsed] = useState(false);
+  const [banner, setBanner] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/unlock/status")
+      .then((r) => r.json())
+      .then((d: { unlocked?: boolean; paymentsConfigured?: boolean; canMock?: boolean }) => {
+        if (d.unlocked) setUnlocked(true);
+        setPaymentsConfigured(Boolean(d.paymentsConfigured));
+        setCanMock(Boolean(d.canMock));
+      })
+      .catch(() => {});
+
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) setPack(JSON.parse(raw) as OfferPack);
+      setRegenUsed(sessionStorage.getItem(REGEN_KEY) === "1");
+    } catch {
+      /* ignore */
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("canceled") === "1") setBanner("Checkout canceled — no charge.");
+    if (params.get("unlock_error") === "1")
+      setBanner("Could not verify payment. Try again or contact support.");
+    if (params.get("unlocked") === "1") setBanner("Welcome back — full pack unlocked.");
+  }, []);
+
+  const generate = useCallback(async (values: FormValues) => {
+    setLoading(true);
+    setError(null);
+    setLastForm(values);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = (await res.json()) as {
+        pack?: OfferPack;
+        unlocked?: boolean;
+        error?: string;
+      };
+      if (!res.ok || !data.pack) {
+        setError(data.error ?? "Generation failed.");
+        setLoading(false);
+        return;
+      }
+      setPack(data.pack);
+      if (typeof data.unlocked === "boolean") setUnlocked(data.unlocked);
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data.pack));
+      } catch {
+        /* ignore */
+      }
+    } catch {
+      setError("Network error — check your connection and try again.");
+    }
+    setLoading(false);
+  }, []);
+
+  async function regenerate() {
+    if (!lastForm || regenUsed) return;
+    sessionStorage.setItem(REGEN_KEY, "1");
+    setRegenUsed(true);
+    // Nudge seed by appending a space-variant via audience tweak for fresh copy
+    await generate({
+      ...lastForm,
+      audience: lastForm.audience
+        ? `${lastForm.audience} `
+        : `builders ${Date.now() % 97}`,
+    });
+  }
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
+      <header className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-wider text-amber-400">
+          FirstBuck · Create
+        </p>
+        <h1 className="mt-1 text-3xl font-bold tracking-tight text-amber-50 sm:text-4xl">
+          Paste an idea. Get a micro-offer.
+        </h1>
+        <p className="mt-2 text-slate-400">
+          First generation is free. Unlock the full pack for $1 when you&apos;re ready
+          to ship.
+        </p>
+      </header>
+
+      {banner ? (
+        <p
+          className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-100"
+          role="status"
+        >
+          {banner}
+        </p>
+      ) : null}
+
+      <div className="rounded-2xl border border-white/8 bg-[#0c1222]/80 p-5 sm:p-6">
+        <IdeaForm onSubmit={generate} loading={loading} initial={lastForm ?? undefined} />
+      </div>
+
+      {error ? (
+        <p className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-300" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      {loading && !pack ? (
+        <div className="mt-8 animate-pulse space-y-3" aria-busy="true" aria-label="Loading">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 rounded-2xl bg-white/5" />
+          ))}
+        </div>
+      ) : null}
+
+      {!loading && !pack && !error ? (
+        <p className="mt-8 text-center text-sm text-slate-500">
+          Your offer pack will show up here — name, promise, posts, and a 24-hour checklist.
+        </p>
+      ) : null}
+
+      {pack ? (
+        <div className="mt-10">
+          <ResultsView
+            pack={pack}
+            unlocked={unlocked}
+            paymentsConfigured={paymentsConfigured}
+            canMock={canMock}
+            onRegenerate={regenerate}
+            canRegenerate={!regenUsed}
+            regenerating={loading}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
