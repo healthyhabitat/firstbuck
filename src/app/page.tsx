@@ -10,8 +10,8 @@ const benefits = [
     body: "3–5 concrete buyer outcomes plus a $1 / $5 / $9 recommendation with rationale.",
   },
   {
-    title: "Copy that ships",
-    body: "Sales blurb, X post, IndieHackers/Reddit draft, and Gumroad description.",
+    title: "3 ready-to-post launch messages",
+    body: "Sales blurb, X post, and IndieHackers/Reddit draft — plus Gumroad copy when you unlock.",
   },
   {
     title: "24-hour checklist",
@@ -47,7 +47,7 @@ export default function HomePage() {
               Generate my offer — free →
             </Link>
             <p className="text-sm text-slate-400">
-              First pack free · Full unlock{" "}
+              Free preview in this browser · Full unlock{" "}
               <span className="font-semibold text-amber-300">$1</span>
             </p>
           </div>
@@ -110,12 +110,12 @@ export default function HomePage() {
       <section className="px-4 pb-20">
         <div className="mx-auto max-w-xl rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent p-8 text-center">
           <h2 className="text-2xl font-bold text-amber-50">
-            Free to try. $1 to keep the full pack.
+            Free preview. $1 to keep the full pack.
           </h2>
           <p className="mt-3 text-slate-300 leading-relaxed">
-            Your first generation is free (preview). Unlock Markdown download,
-            Gumroad copy, remove the watermark, and get one regenerate — all for
-            a single dollar. Same impulse-buy energy we preach.
+            Generate a watermarked preview free in this browser. Unlock Markdown
+            download, Gumroad copy, remove the watermark, and get one regenerate
+            — all for a single dollar. Same impulse-buy energy we preach.
           </p>
           <Link
             href="/create"

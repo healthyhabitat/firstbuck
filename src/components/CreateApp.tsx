@@ -141,8 +141,8 @@ export function CreateApp({
           Paste an idea. Get a micro-offer.
         </h1>
         <p className="mt-2 text-slate-400">
-          First generation is free. Unlock the full pack for $1 when you&apos;re
-          ready to ship.
+          Free preview in this browser (watermarked). Unlock Markdown, Gumroad
+          copy, and one regenerate for $1 when you&apos;re ready to ship.
         </p>
       </header>
 

@@ -16,11 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "FirstBuck — Turn a rough idea into a $1–$9 offer in minutes",
   description:
-    "Paste a side-project idea. Get a complete micro-offer: name, promise, deliverables, sales copy, social posts, and a 24-hour launch checklist. First generation free. Full pack $1.",
+    "Paste a side-project idea. Get a complete micro-offer: name, promise, deliverables, sales copy, social posts, and a 24-hour launch checklist. Free preview. Full pack $1.",
   openGraph: {
     title: "FirstBuck — ship a micro-offer today",
     description:
-      "From rough idea to sellable $1–$9 pack in minutes. Free first generation.",
+      "From rough idea to sellable $1–$9 pack in minutes. Free preview in your browser.",
     type: "website",
   },
   twitter: {

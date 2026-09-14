@@ -38,7 +38,7 @@
 
 ## Known stubs / behaviors
 
-- Without `STRIPE_SECRET_KEY` in **production**, unlock shows “payments not configured”
+- Without `STRIPE_SECRET_KEY` in **production**, unlock CTA shows a friendly “payments being set up” message (never env var names)
 - Mock unlock (`/api/unlock/mock`) only works when `NODE_ENV=development`
 - OpenAI polish is optional and silently falls back to templates
 - Regenerate is one-time per browser session (sessionStorage)

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { PAYMENTS_SOON_MESSAGE } from "@/lib/checkout-errors";
 import { getAppUrl, getStripe, paymentsConfigured } from "@/lib/stripe";
 
 export async function POST() {
@@ -10,11 +11,11 @@ export async function POST() {
         message: "Stripe unset — use mock unlock in development.",
       });
     }
+    // Never leak env var names or internal config details to the client.
     return NextResponse.json(
       {
-        error: "payments_not_configured",
-        message:
-          "Payments are not configured yet. Set STRIPE_SECRET_KEY to enable $1 unlock.",
+        error: "payments_unavailable",
+        message: PAYMENTS_SOON_MESSAGE,
       },
       { status: 503 }
     );
@@ -22,7 +23,14 @@ export async function POST() {
 
   const stripe = getStripe();
   if (!stripe) {
-    return NextResponse.json({ error: "stripe_init_failed" }, { status: 500 });
+    console.error("Stripe client failed to initialize despite configured key");
+    return NextResponse.json(
+      {
+        error: "payments_unavailable",
+        message: PAYMENTS_SOON_MESSAGE,
+      },
+      { status: 503 }
+    );
   }
 
   const appUrl = getAppUrl();
@@ -54,7 +62,7 @@ export async function POST() {
   } catch (err) {
     console.error("Stripe checkout error", err);
     return NextResponse.json(
-      { error: "checkout_failed", message: "Could not start checkout." },
+      { error: "checkout_failed", message: "Could not start checkout. Try again in a moment." },
       { status: 500 }
     );
   }
