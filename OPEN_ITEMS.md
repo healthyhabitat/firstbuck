@@ -1,18 +1,22 @@
-# Open items — morning checklist for James
+# Open items
+
+> **Primary checklist:** read **[MORNING_BRIEF.md](./MORNING_BRIEF.md)** first — what shipped, exact env vars, how to make $1, and copy-paste launch posts.
 
 **Live:** https://firstbuck-ten.vercel.app  
-**Repo:** https://github.com/healthyhabitat/firstbuck
+**Repo:** https://github.com/healthyhabitat/firstbuck  
+**OG:** https://firstbuck-ten.vercel.app/og.png
 
 ## Must-do before real revenue
 
-1. **Env vars (must-have)**
-   - `STRIPE_SECRET_KEY` (live) in Vercel
+1. **Env vars** (exact names — paste in Vercel, then redeploy)
+   - `STRIPE_SECRET_KEY` (live or test)
    - `UNLOCK_COOKIE_SECRET` — long random string
-   - `NEXT_PUBLIC_APP_URL` = `https://firstbuck-ten.vercel.app` (or custom domain)
-   - Run a $1 test purchase end-to-end; confirm cookie + success page
+   - `NEXT_PUBLIC_APP_URL` = `https://firstbuck-ten.vercel.app`
+   - Run a $1 test purchase; confirm cookie + success page  
+   Details: [MORNING_BRIEF.md](./MORNING_BRIEF.md)
 
-2. **Post MARKETING drafts** (after keys work)
-   - Use [MARKETING.md](./MARKETING.md) — links already point at production
+2. **Post launch drafts** (after keys work)
+   - Copy-paste from [MORNING_BRIEF.md](./MORNING_BRIEF.md) (or [MARKETING.md](./MARKETING.md))
    - [ ] X launch + reply with link
    - [ ] IndieHackers “I launched”
    - [ ] Reddit r/SideProject
@@ -26,13 +30,14 @@
 4. **Smoke test**
    - Landing loads at https://firstbuck-ten.vercel.app
    - Free generation works
-   - Gumroad section locked; Markdown disabled
+   - Gumroad section locked; Markdown disabled until unlock
    - Unlock → success → full pack + download
    - Print stylesheet looks OK
+   - Link previews show OG image (`/og.png`)
 
 ## Nice-to-have this week
 
-- [ ] OG image (`/og.png`)
+- [x] OG image (`/og.png`) + metadata
 - [ ] Vercel Analytics or Plausible
 - [ ] Rate-limit `/api/generate` (Upstash / simple IP)
 - [ ] Optional `OPENAI_API_KEY` for blurb polish

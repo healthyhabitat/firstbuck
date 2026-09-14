@@ -62,7 +62,8 @@ npx vercel --yes
 
 - [PLAN.md](./PLAN.md) — problem, audience, GTM, metrics, risks
 - [MARKETING.md](./MARKETING.md) — ready-to-post drafts + PH checklist
-- [OPEN_ITEMS.md](./OPEN_ITEMS.md) — morning checklist for shipping live payments
+- [MORNING_BRIEF.md](./MORNING_BRIEF.md) — **read this first** when you wake (env vars, first $1, launch posts)
+- [OPEN_ITEMS.md](./OPEN_ITEMS.md) — secondary checklist (points at morning brief)
 
 ## License
 

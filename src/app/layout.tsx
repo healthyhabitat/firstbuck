@@ -13,7 +13,10 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://firstbuck-ten.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "FirstBuck — Turn a rough idea into a $1–$9 offer in minutes",
   description:
     "Paste a side-project idea. Get a complete micro-offer: name, promise, deliverables, sales copy, social posts, and a 24-hour launch checklist. Free preview. Full pack $1.",
@@ -22,11 +25,22 @@ export const metadata: Metadata = {
     description:
       "From rough idea to sellable $1–$9 pack in minutes. Free preview in your browser.",
     type: "website",
+    url: siteUrl,
+    siteName: "FirstBuck",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "FirstBuck — Idea → $1–$9 offer",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "FirstBuck",
     description: "Paste an idea → get a $1–$9 micro-offer you can sell in 24 hours.",
+    images: ["/og.png"],
   },
 };
 
