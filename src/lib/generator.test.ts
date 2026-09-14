@@ -4,8 +4,10 @@ import {
   packToMarkdown,
   hashSeed,
   extractTheme,
+  parseIdea,
+  detectProductKind,
 } from "./generator";
-import type { IdeaInput } from "./types";
+import type { IdeaInput, OfferPack } from "./types";
 
 const base: IdeaInput = {
   idea: "A meal planner for busy parents who hate grocery waste",
@@ -13,6 +15,53 @@ const base: IdeaInput = {
   status: "idea",
   priceBand: 5,
 };
+
+const notionFixture: IdeaInput = {
+  idea:
+    "A Notion template that helps freelance designers track client feedback rounds so revisions do not spiral.",
+  audience: "freelance designers",
+  status: "idea",
+  priceBand: 5,
+};
+
+const linkedinFixture: IdeaInput = {
+  idea:
+    "A Chrome extension that drafts personalized LinkedIn comments for B2B founders so they can network without spending hours.",
+  audience: "B2B founders",
+  status: "wip",
+  priceBand: 9,
+};
+
+const META =
+  /micro-offer|zero-to-offer|cashflow signal|packaged a micro-offer|sellable micro-offer|turn your rough idea|notes app|without building software|swipe-file offer name|objection-handling faq|social proof prompt sheet|from idea to first sale|people who want a first sale this week/i;
+
+function blob(pack: OfferPack): string {
+  return [
+    pack.offerName,
+    pack.promise,
+    pack.deliverables.join("\n"),
+    pack.priceWhy,
+    pack.salesBlurb,
+    pack.twitterPost,
+    pack.communityPost,
+    pack.gumroadDescription,
+    pack.launchChecklist.join("\n"),
+  ].join("\n");
+}
+
+function assertSellsProduct(pack: OfferPack) {
+  const text = blob(pack);
+  expect(text).not.toMatch(META);
+  expect(pack.offerName).not.toMatch(/\bBundle\b/i);
+  expect(pack.offerName).not.toMatch(
+    /^(Launch|Quick|Starter|Ready|First|Mini|Pocket|Sprint|Day-One|Ship)\b/i
+  );
+  expect(pack.promise.toLowerCase()).not.toMatch(/micro-offer|sellable package/);
+  expect(pack.communityPost.toLowerCase()).not.toMatch(/packaged a micro-offer/);
+  expect(pack.salesBlurb.toLowerCase()).not.toMatch(
+    /ideas that never leave the notes app/
+  );
+}
 
 describe("hashSeed", () => {
   it("is deterministic", () => {
@@ -26,6 +75,19 @@ describe("extractTheme", () => {
     const t = extractTheme("an app to help freelancers invoice clients faster");
     expect(t.toLowerCase()).toMatch(/freelance|invoice|client/);
   });
+
+  it("does not return format-only meta names", () => {
+    const t = extractTheme(notionFixture.idea);
+    expect(t.toLowerCase()).not.toMatch(/^notion template$/);
+    expect(t.toLowerCase()).toMatch(/revision|feedback|round|client/);
+  });
+});
+
+describe("detectProductKind", () => {
+  it("detects Notion templates and Chrome extensions", () => {
+    expect(detectProductKind(notionFixture.idea)).toBe("notion_template");
+    expect(detectProductKind(linkedinFixture.idea)).toBe("chrome_extension");
+  });
 });
 
 describe("generateOfferPack", () => {
@@ -37,12 +99,17 @@ describe("generateOfferPack", () => {
     expect(pack.deliverables.length).toBeLessThanOrEqual(5);
     expect(pack.price).toBe(5);
     expect(pack.priceWhy.length).toBeGreaterThan(20);
-    expect(pack.salesBlurb.split(/\s+/).length).toBeGreaterThanOrEqual(100);
-    expect(pack.salesBlurb.split(/\s+/).length).toBeLessThanOrEqual(200);
+    expect(pack.salesBlurb.split(/\s+/).filter(Boolean).length).toBeGreaterThanOrEqual(
+      100
+    );
+    expect(pack.salesBlurb.split(/\s+/).filter(Boolean).length).toBeLessThanOrEqual(
+      200
+    );
     expect(pack.twitterPost).toContain("$5");
     expect(pack.communityPost).toContain(pack.offerName);
     expect(pack.gumroadDescription).toContain(pack.offerName);
     expect(pack.launchChecklist).toHaveLength(5);
+    assertSellsProduct(pack);
   });
 
   it("is deterministic for same inputs", () => {
@@ -69,6 +136,9 @@ describe("generateOfferPack", () => {
       priceBand: 9,
     });
     expect(pack.promise.toLowerCase()).toMatch(/writer|newsletter|maker|people/);
+    expect(pack.promise.toLowerCase()).not.toMatch(/\bthi\b|thiing/);
+    expect(pack.deliverables.join(" ").toLowerCase()).not.toMatch(/feedback rounds/);
+    assertSellsProduct(pack);
   });
 
   it("rejects short ideas", () => {
@@ -82,6 +152,106 @@ describe("generateOfferPack", () => {
     expect(pack.launchChecklist.some((s) => /slice|already built|export/i.test(s))).toBe(
       true
     );
+  });
+});
+
+describe("Notion freelance designer fixture", () => {
+  const pack = generateOfferPack(notionFixture);
+
+  it("names the user's product, not a meta bundle", () => {
+    expect(pack.offerName.toLowerCase()).toMatch(/revision|feedback|round|client/);
+    expect(pack.offerName.toLowerCase()).not.toMatch(/notion template bundle|launch /);
+    expect(pack.offerName).not.toMatch(/\bBundle\b/i);
+  });
+
+  it("promise is benefit-first for freelance designers", () => {
+    expect(pack.promise.toLowerCase()).toMatch(/revision|spiral|feedback|round/);
+    expect(pack.promise.toLowerCase()).toMatch(/designer/);
+    expect(pack.promise.toLowerCase()).not.toMatch(
+      /micro-offer|sellable package|under a day/
+    );
+  });
+
+  it("deliverables are buyer artifacts of the Notion template", () => {
+    const d = pack.deliverables.join(" ").toLowerCase();
+    expect(d).toMatch(/notion/);
+    expect(d).toMatch(/template|workspace/);
+    expect(d).toMatch(/setup/);
+    expect(d).toMatch(/example|workflow|client-share|share view|guest view/);
+    expect(d).not.toMatch(/zero-to-offer|objection-handling faq|swipe-file/);
+  });
+
+  it("sales / social / gumroad copy sells the template to designers", () => {
+    expect(pack.salesBlurb.toLowerCase()).toMatch(/designer|revision|feedback/);
+    expect(pack.salesBlurb.toLowerCase()).not.toMatch(
+      /ideas that never leave the notes app|cashflow signal/
+    );
+    expect(pack.gumroadDescription.toLowerCase()).toMatch(/designer/);
+    expect(pack.gumroadDescription.toLowerCase()).not.toMatch(
+      /first sale this week|6-month roadmap/
+    );
+    expect(pack.twitterPost.toLowerCase()).toMatch(
+      /designer|revision|feedback|notion/
+    );
+    expect(pack.communityPost.toLowerCase()).toMatch(/launched/);
+    expect(pack.communityPost.toLowerCase()).not.toMatch(/packaged a micro-offer/);
+    assertSellsProduct(pack);
+  });
+
+  it("launch checklist is for listing that template", () => {
+    const steps = pack.launchChecklist.join(" ").toLowerCase();
+    expect(steps).toMatch(/gumroad|lemon/);
+    expect(steps).toMatch(/notion|template|duplicate/);
+    expect(steps).toMatch(/freelance designers|designer/);
+  });
+});
+
+describe("LinkedIn Chrome extension fixture", () => {
+  const pack = generateOfferPack(linkedinFixture);
+
+  it("names the extension, not a Chrome Extension Bundle", () => {
+    expect(pack.offerName.toLowerCase()).toMatch(
+      /linkedin|comment|reply|draft|network/
+    );
+    expect(pack.offerName.toLowerCase()).not.toMatch(
+      /chrome extension bundle|launch /
+    );
+    expect(pack.offerName).not.toMatch(/\bBundle\b/i);
+  });
+
+  it("promise is about networking time for B2B founders", () => {
+    expect(pack.promise.toLowerCase()).toMatch(
+      /founder|linkedin|comment|network|hour/
+    );
+    expect(pack.promise.toLowerCase()).not.toMatch(/micro-offer|sellable package/);
+  });
+
+  it("deliverables are extension artifacts buyers receive", () => {
+    const d = pack.deliverables.join(" ").toLowerCase();
+    expect(d).toMatch(/extension|chrome/);
+    expect(d).toMatch(/install|preset|shortcut|zip|sideload|quick-start/);
+    expect(d).not.toMatch(/zero-to-offer|objection-handling faq|swipe-file/);
+  });
+
+  it("copy is paste-ready to sell the extension to founders", () => {
+    expect(pack.salesBlurb.toLowerCase()).toMatch(/founder|linkedin|comment/);
+    expect(pack.gumroadDescription.toLowerCase()).toMatch(/founder|linkedin/);
+    expect(pack.twitterPost.toLowerCase()).toMatch(/founder|linkedin|comment|extension/);
+    expect(pack.communityPost.toLowerCase()).not.toMatch(/packaged a micro-offer/);
+    expect(pack.launchChecklist.join(" ").toLowerCase()).toMatch(
+      /extension|zip|chrome|readme/
+    );
+    assertSellsProduct(pack);
+  });
+});
+
+describe("parseIdea", () => {
+  it("extracts action and outcome from the Notion idea", () => {
+    const p = parseIdea(notionFixture.idea, notionFixture.audience);
+    expect(p.kind).toBe("notion_template");
+    expect(p.action.toLowerCase()).toMatch(/track|feedback|round/);
+    expect(p.outcome.toLowerCase()).toMatch(/revision|spiral/);
+    expect(p.pain.toLowerCase()).toMatch(/revision|spiral/);
   });
 });
 

@@ -4,6 +4,7 @@ import type { IdeaInput, OfferPack } from "./types";
 /**
  * Generate an offer pack. Uses deterministic engine always.
  * If OPENAI_API_KEY is set, optionally polish the sales blurb (best-effort).
+ * Polish must still sell the USER's product to the stated audience — never FirstBuck meta copy.
  */
 export async function generateOffer(input: IdeaInput): Promise<OfferPack> {
   const pack = generateOfferPack(input);
@@ -25,11 +26,11 @@ export async function generateOffer(input: IdeaInput): Promise<OfferPack> {
           {
             role: "system",
             content:
-              "You polish micro-SaaS sales blurbs. Return ONLY the improved blurb, 120-180 words, no markdown fences.",
+              "You polish sales blurbs for the USER's product (the idea they typed). Sell that product to the stated audience. Never mention micro-offers, packaging an offer, FirstBuck, cashflow signal, turning an idea into a product, or listing something on Gumroad as a meta-lesson. Return ONLY the improved blurb, 120-180 words, no markdown fences.",
           },
           {
             role: "user",
-            content: `Offer: ${pack.offerName}\nPromise: ${pack.promise}\nBlurb:\n${pack.salesBlurb}`,
+            content: `Idea: ${input.idea}\nAudience: ${input.audience ?? "the buyers of this product"}\nProduct name: ${pack.offerName}\nPromise: ${pack.promise}\nBlurb:\n${pack.salesBlurb}`,
           },
         ],
       }),
