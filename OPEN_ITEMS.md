@@ -1,32 +1,34 @@
 # Open items — morning checklist for James
 
+**Live:** https://firstbuck-ten.vercel.app  
+**Repo:** https://github.com/healthyhabitat/firstbuck
+
 ## Must-do before real revenue
 
-1. **Stripe live keys**
-   - Create product mentally as “FirstBuck Full Pack Unlock” ($1)
-   - Set `STRIPE_SECRET_KEY` (live) in Vercel env
-   - Set `UNLOCK_COOKIE_SECRET` to a long random string
-   - Set `NEXT_PUBLIC_APP_URL` to the production domain
+1. **Env vars (must-have)**
+   - `STRIPE_SECRET_KEY` (live) in Vercel
+   - `UNLOCK_COOKIE_SECRET` — long random string
+   - `NEXT_PUBLIC_APP_URL` = `https://firstbuck-ten.vercel.app` (or custom domain)
    - Run a $1 test purchase end-to-end; confirm cookie + success page
 
-2. **Domain**
+2. **Post MARKETING drafts** (after keys work)
+   - Use [MARKETING.md](./MARKETING.md) — links already point at production
+   - [ ] X launch + reply with link
+   - [ ] IndieHackers “I launched”
+   - [ ] Reddit r/SideProject
+   - [ ] 10 personal DMs to makers
+
+3. **Domain** (optional once live URL works)
    - Point custom domain at Vercel project
    - Update `NEXT_PUBLIC_APP_URL`
    - Confirm HTTPS + cookie `Secure` flag works
 
-3. **Smoke test**
-   - Landing loads
+4. **Smoke test**
+   - Landing loads at https://firstbuck-ten.vercel.app
    - Free generation works
    - Gumroad section locked; Markdown disabled
    - Unlock → success → full pack + download
    - Print stylesheet looks OK
-
-## Launch posts (use MARKETING.md)
-
-- [ ] X launch + reply with link
-- [ ] IndieHackers “I launched”
-- [ ] Reddit r/SideProject
-- [ ] 10 personal DMs to makers
 
 ## Nice-to-have this week
 

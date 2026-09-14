@@ -17,7 +17,7 @@ First generation free. Full pack = $1.
 
 Because validation beats vibes.
 
-[link]
+https://firstbuck-ten.vercel.app
 ```
 
 **Thread hook**
@@ -55,7 +55,7 @@ Would love feedback:
 2. Would you pay $1 for the full pack after a free gen?
 3. What’s the weakest section of the output?
 
-Link: [URL]
+Link: https://firstbuck-ten.vercel.app
 
 ## Reddit — r/SideProject
 
@@ -71,7 +71,7 @@ Not raising a fund. Just trying to help people make a first dollar this week.
 
 Happy to generate one live if you drop an idea in the comments.
 
-Link: [URL]
+Link: https://firstbuck-ten.vercel.app
 
 ## Product Hunt checklist
 

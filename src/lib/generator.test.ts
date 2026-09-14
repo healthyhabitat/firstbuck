@@ -226,6 +226,38 @@ describe("LinkedIn Chrome extension fixture", () => {
     expect(pack.promise.toLowerCase()).not.toMatch(/micro-offer|sellable package/);
   });
 
+  it("promise is natural and benefit-first, not a mechanical rewrite", () => {
+    const p = pack.promise.toLowerCase();
+    expect(p).not.toMatch(/who need to .+ without the usual mess/);
+    expect(p).not.toMatch(/is a chrome extension for .+ who need to/);
+    // Benefit framing: help / give / stop / without / so …
+    expect(p).toMatch(/helps?|gives?|stop |without|so they/);
+  });
+
+  it("sales blurb never duplicates the same paragraph twice", () => {
+    const paras = pack.salesBlurb
+      .split(/\n\n+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const norm = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    const normalized = paras.map(norm);
+    expect(new Set(normalized).size).toBe(normalized.length);
+
+    // Promise text must not reappear as its own blurb paragraph
+    const promiseNorm = norm(pack.promise);
+    expect(normalized.some((n) => n === promiseNorm)).toBe(false);
+
+    // Structure: problem → product → what's inside → CTA
+    expect(pack.salesBlurb.toLowerCase()).toMatch(/inside:/);
+    expect(pack.salesBlurb.toLowerCase()).toMatch(/grab .+ for \$9/);
+    expect(paras.length).toBeGreaterThanOrEqual(4);
+  });
+
   it("deliverables are extension artifacts buyers receive", () => {
     const d = pack.deliverables.join(" ").toLowerCase();
     expect(d).toMatch(/extension|chrome/);
@@ -252,6 +284,18 @@ describe("parseIdea", () => {
     expect(p.action.toLowerCase()).toMatch(/track|feedback|round/);
     expect(p.outcome.toLowerCase()).toMatch(/revision|spiral/);
     expect(p.pain.toLowerCase()).toMatch(/revision|spiral/);
+  });
+
+  it("reframes replace-X-with-Y into a benefit-first action", () => {
+    const p = parseIdea(
+      "A Chrome extension that replaces the LinkedIn feed with a daily job search checklist",
+      "job seekers"
+    );
+    expect(p.action.toLowerCase()).toMatch(/job search checklist/);
+    expect(p.action.toLowerCase()).toMatch(/instead of/);
+    expect(p.action.toLowerCase()).not.toMatch(/^replace /);
+    expect(p.coreName.toLowerCase()).toMatch(/job search|checklist/);
+    expect(p.coreName.toLowerCase()).not.toMatch(/feed os/);
   });
 });
 

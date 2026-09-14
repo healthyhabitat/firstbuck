@@ -4,7 +4,8 @@
 
 FirstBuck is a polished micro-product for indie makers: generate an offer name, promise, deliverables, pricing rationale, sales blurb, social posts, Gumroad copy, and a launch checklist — without needing an AI API key.
 
-- **Live repo:** https://github.com/healthyhabitat/firstbuck
+- **Live:** https://firstbuck-ten.vercel.app
+- **Repo:** https://github.com/healthyhabitat/firstbuck
 - **Stack:** Next.js App Router, TypeScript, Tailwind CSS, Stripe Checkout
 - **Monetization:** First generation free (limited). Full pack unlock = **$1**.
 

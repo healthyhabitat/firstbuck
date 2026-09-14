@@ -361,11 +361,12 @@ function shortAudienceLabel(audience: string): string {
 
 function scoreName(n: string): number {
   let s = 0;
-  if (/\b(Tracker|Drafter|Writer|Planner|Organizer|Manager|Generator|Automation|Scheduler)\b/i.test(n)) {
+  if (/\b(Tracker|Drafter|Writer|Planner|Organizer|Manager|Generator|Automation|Scheduler|Checklist)\b/i.test(n)) {
     s += 4;
   }
   if (/\bOS\b/.test(n)) {
-    s += WEAK_ADJECTIVES.has(n.split(/\s+/)[0].toLowerCase()) ? 0 : 3;
+    // Prefer concrete product nouns over meta "OS" branding
+    s += WEAK_ADJECTIVES.has(n.split(/\s+/)[0].toLowerCase()) ? -1 : 1;
   }
   if (/\bKit\b/.test(n)) s += 1;
   const hits = n.match(/linkedin|feedback|revision|round|comment|reply|invoice|meal|notion/gi);
@@ -440,6 +441,23 @@ function buildNameCandidates(
     add("Freelance Invoice Kit");
   }
 
+  // Checklist / feed-swap ideas: keep product-like names even though "checklist" is a format word
+  if (/\bchecklist\b/i.test(objectPhrase) || /\bchecklist\b/i.test(raw)) {
+    const topic = significantWords(
+      objectPhrase.replace(/\bchecklist\b/gi, " ")
+    ).slice(-2);
+    if (topic.length) {
+      add(titleCase(`${topic.join(" ")} Checklist`));
+      add(titleCase(`${topic.join(" ")} Tracker`));
+    } else {
+      add("Daily Checklist");
+    }
+  }
+  if (/\bjob\s+search\b/i.test(objectPhrase) || /\bjob\s+search\b/i.test(raw)) {
+    add("Daily Job Search Checklist");
+    add("Job Search Focus Kit");
+  }
+
   const aud = shortAudienceLabel(audience);
   const base = [...names];
   for (const n of base) {
@@ -492,6 +510,17 @@ export function parseIdea(idea: string, audienceHint?: string): ParsedIdea {
     .replace(/\s+\bwho\s+.+$/i, "")
     .trim();
 
+  // "replaces the LinkedIn feed with a daily job search checklist"
+  // → benefit-first: "run a daily job search checklist instead of the LinkedIn feed"
+  const replaceWith = action.match(
+    /^replac(?:e|es|ing)\s+(.+?)\s+with\s+(.+)$/i
+  );
+  if (replaceWith) {
+    const from = replaceWith[1].trim();
+    const to = replaceWith[2].trim();
+    action = `run ${to} instead of ${from}`;
+  }
+
   const lead = leadNounPhrase(body);
   let usedDefault = false;
   if (!action) action = actionFromLead(lead);
@@ -531,11 +560,25 @@ export function parseIdea(idea: string, audienceHint?: string): ParsedIdea {
       ? `${toGerund(lemma)} ${rest}`
       : toGerund(lemma);
 
+  // Prefer the replacement target for names (job search checklist > LinkedIn feed)
+  const replaceTarget = raw.match(/\breplac(?:e|es|ing)\s+.+?\s+with\s+(.+)$/i);
+  const nameObject = replaceTarget
+    ? replaceTarget[1].trim()
+    : usedDefault
+      ? ""
+      : objectPhrase;
+  const nameVerb = replaceTarget
+    ? ""
+    : usedDefault
+      ? ""
+      : lemma;
+  const nameLead = replaceTarget ? replaceTarget[1].trim() : lead;
+
   const nameCandidates = buildNameCandidates(
-    usedDefault ? "" : lemma,
-    usedDefault ? "" : objectPhrase,
+    nameVerb,
+    nameObject,
     outcome,
-    lead,
+    nameLead,
     pain,
     audience,
     raw
@@ -574,7 +617,7 @@ function buildOfferName(parsed: ParsedIdea, seed: number): string {
 }
 
 function buildPromise(offerName: string, parsed: ParsedIdea, seed: number): string {
-  const { audience, action, soClause, pain, kindLabel: format } = parsed;
+  const { audience, action, soClause, pain } = parsed;
   const templates: string[] = [];
   if (pain && pain.split(/\s+/).length <= 8) {
     templates.push(`Stop ${pain}: ${offerName} helps ${audience} ${action}.`);
@@ -582,13 +625,23 @@ function buildPromise(offerName: string, parsed: ParsedIdea, seed: number): stri
   if (soClause) {
     templates.push(`${offerName} helps ${audience} ${action} ${soClause}.`);
   }
+  if (pain && !soClause) {
+    templates.push(
+      `${offerName} helps ${audience} ${action} without ${pain}.`
+    );
+  }
   templates.push(
-    `${offerName} is a ${format} for ${audience} who need to ${action} without the usual mess.`
+    `${offerName} gives ${audience} a focused way to ${action}${
+      pain ? ` — without ${pain}` : ""
+    }.`
   );
   templates.push(
-    `Give ${audience} a simple way to ${action}${soClause ? ` — ${soClause}` : ""}.`
+    `Give ${audience} a simple way to ${action}${
+      soClause ? ` — ${soClause}` : pain ? ` without ${pain}` : ""
+    }.`
   );
-  return pick(templates, seed, 5);
+  const chosen = pick(templates, seed, 5).replace(/\s+/g, " ").trim();
+  return /[.!?]$/.test(chosen) ? chosen : `${chosen}.`;
 }
 
 function deliverablesFor(
@@ -629,14 +682,22 @@ function deliverablesFor(
       [
         `${offerName} Chrome extension (installable zip + icons)`,
         "Install and permissions one-pager",
-        `Default presets for ${/linkedin/i.test(raw) ? "the comments and replies" : "the actions"} ${audience} use most`,
+        `Default presets for ${
+          /linkedin/i.test(raw) && /comment|reply|draft/i.test(raw)
+            ? "the comments and replies"
+            : "the actions"
+        } ${audience} use most`,
         "Keyboard shortcut cheatsheet",
         `3 before/after examples of ${actionIng}`,
       ],
       [
         `Unpackaged ${offerName} extension build ready to sideload or submit`,
         "Quick-start: install in Chrome in under 3 minutes",
-        `Prompt / snippet presets covering common ${/linkedin/i.test(raw) ? "LinkedIn reply tones" : "use cases"}`,
+        `Prompt / snippet presets covering common ${
+          /linkedin/i.test(raw) && /comment|reply|draft/i.test(raw)
+            ? "LinkedIn reply tones"
+            : "use cases"
+        }`,
         "Shortcut and popup cheatsheet",
         `Sample workflows for ${audience}`,
       ],
@@ -761,9 +822,39 @@ function wordCount(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
 
+function normalizeParagraph(p: string): string {
+  return p
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Drop near-duplicate paragraphs (e.g. product line repeating the promise). */
+function dedupeParagraphs(text: string): string {
+  const paras = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  const kept: string[] = [];
+  for (const p of paras) {
+    const norm = normalizeParagraph(p);
+    const dup = kept.some((k) => {
+      const kn = normalizeParagraph(k);
+      if (kn === norm) return true;
+      if (norm.length >= 40 && kn.includes(norm.slice(0, Math.floor(norm.length * 0.65)))) {
+        return true;
+      }
+      if (kn.length >= 40 && norm.includes(kn.slice(0, Math.floor(kn.length * 0.65)))) {
+        return true;
+      }
+      return false;
+    });
+    if (!dup) kept.push(p);
+  }
+  return kept.join("\n\n");
+}
+
 function buildSalesBlurb(
   offerName: string,
-  promise: string,
+  _promise: string,
   parsed: ParsedIdea,
   deliverables: string[],
   price: PriceBand
@@ -772,26 +863,21 @@ function buildSalesBlurb(
   const d1 = deliverables[0] ?? `the ${format}`;
   const d2 = deliverables[1] ?? "a setup guide";
   const d3 = deliverables[2] ?? "a worked example";
-  const painLine = pain
+  // problem → product → what's inside → CTA (never paste promise; that caused duplicates)
+  const problem = pain
     ? `${sentenceCase(audience)} know the cost of ${pain}.`
     : `${sentenceCase(audience)} are tired of doing this the hard way.`;
-  const outcomeBit = soClause
-    ? ` — ${soClause}`
+  const product = soClause
+    ? `${offerName} is the ${format} that helps ${audience} ${action} ${soClause}.`
     : pain
-      ? ` without ${pain}`
-      : " without the usual mess";
-
-  let blurb = `${painLine}
-
-${offerName} is a ${format} for ${audience} who need to ${action}${outcomeBit}.
-
-${promise}
-
-Inside: ${d1}. Plus ${d2}, and ${d3}. Open it, use it this week, and keep the rest of your week.
-
-No bloated suite. No endless setup. A $${price} ${format} that does one job well.
+      ? `${offerName} is the ${format} that helps ${audience} ${action} without ${pain}.`
+      : `${offerName} is the ${format} that helps ${audience} ${action}.`;
+  const inside = `Inside: ${d1}. Plus ${d2}, and ${d3}. Open it, use it this week, and keep the rest of your week.`;
+  const cta = `No bloated suite. No endless setup. A $${price} ${format} that does one job well.
 
 Built for ${audience}. Grab ${offerName} for $${price} and use it today.`;
+
+  let blurb = dedupeParagraphs(`${problem}\n\n${product}\n\n${inside}\n\n${cta}`);
 
   if (wordCount(blurb) < 120) {
     blurb += ` If it saves you one evening, it has already paid for itself.`;
@@ -827,7 +913,9 @@ function buildTwitter(
     parsed.kind === "notion_template"
       ? "#Notion #Freelance"
       : parsed.kind === "chrome_extension"
-        ? "#ChromeExtension #LinkedIn"
+        ? /linkedin/i.test(parsed.raw)
+          ? "#ChromeExtension #LinkedIn"
+          : "#ChromeExtension #indiehackers"
         : "#indiehackers";
   return `${hook}
 
